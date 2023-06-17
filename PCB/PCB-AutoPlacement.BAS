@@ -17,7 +17,7 @@
 '                Set dimension units const ppcbUnits to match the Grid64Data array. PCB job can be (left) in any "units".
 ' 20150226  BLM  block repeat X axis error was 2500 should be 2300
 ' 20150514  BLM  Added transform & offset array to support mercury (no mirror symmetry)
-'                               Changed attributes used for placement info
+'                Changed attributes used for placement info
 ' 20150520  BLM  Cell placement geometry type text required to be loaded in PCB doc Attribute "Placement.TestJig"
 ' 20150528  BLM  Hexadecimal attribute values for "CELL NUM" need prefix of "&H" .. just use simple decimal numbers.
 ' 201511--  BLM  added OCXO Mercury Aging geometry
@@ -52,9 +52,9 @@ Dim starttime As String
 Dim blnQuestionableData As Boolean
 
 '  position = GridData * {transform} + {offset}
-Dim GridData As Variant
-Dim GridOffset As Variant               ' block offset matrix { A B C D}
-Dim GridSymmetry As Variant             ' transform matrix { A B C D}
+Dim GridData As Variant                 ' per Cell offsets.
+Dim GridOffset As Variant               ' per block offset matrix    { A B C D}
+Dim GridSymmetry As Variant             ' per block transform matrix { A B C D}  flipping X & Y
 ' Dim Block_offsetX As Double 
 Dim ppcbUnits As Long                   ' ppcbUnitCurrent, ppcbUnitDatabase, ppcbUnitInch, ppcbUnitMetric
 Dim TestCardType As Long
@@ -70,58 +70,54 @@ Dim TestCardType As Long
 Const Grid64Units As Long = ppcbUnitMils
 '---------------------------------------------------------------------------------------------------------------------
 ' std LFM testcard 4 block of 16
-Const Grid64Symmetry = Array(Array(1, 1), Array(1, -1), Array(1, 1), Array(1, -1) )
-Const Grid64Offset = Array(Array(0, 0),Array(0, 0),Array(2300, 0),Array(2300, 0) )
-Const Grid64Data = Array(Array(-1900,-400), Array(-1900,-750), Array(-1900,-1100), Array(-1900,-1450), _
-                         Array(-1400,-400), Array(-1400,-750), Array(-1400,-1100), Array(-1400,-1450), _
-                         Array(-900,-400),  Array(-900,-750),  Array(-900,-1100),  Array(-900,-1450), _
-                         Array(-400,-400),  Array(-400,-750),  Array(-400,-1100),  Array(-400,-1450), _
-                        )
+Const Grid64Symmetry = Array(Array(1, 1), Array(1, -1), Array(   1, 1), Array(   1, -1) )
+Const Grid64Offset   = Array(Array(0, 0), Array(0,  0), Array(2300, 0), Array(2300,  0) )
+Const Grid64Data     = Array(Array(-1900, -400), Array(-1900, -750), Array(-1900, -1100), Array(-1900, -1450), _
+                             Array(-1400, -400), Array(-1400, -750), Array(-1400, -1100), Array(-1400, -1450), _
+                             Array(-900,  -400), Array( -900, -750), Array( -900, -1100), Array( -900, -1450), _
+                             Array(-400,  -400), Array( -400, -750), Array( -400, -1100), Array( -400, -1450),   )
 Const LFM16x4 As Long = 1640
 '---------------------------------------------------------------------------------------------------------------------
 ' std LFM Mercury testcard  4 blocks 10DUTs/block; no mirror x axis symmetry; all direct offsets & metric
 ' B = {0, 47} + {1, 1} * A ; C = {60.5, 0} + {1, 1} * A ; D=  {60.5, 47} + {1, 1} * A
 ' cell 0 to 9 as (x,y) offsets from origin as centre PCB.
 Const MercuryGrid40Units As Long =  ppcbUnitMetric
-Const MercuryGrid40Symmetry = Array(Array(1, 1), Array(1, 1), Array(1, 1), Array(1, 1) )
-Const MercuryGrid40Offset = Array(Array(0, 0), Array(0, 47), Array(60.5, 0), Array(60.5, 47) )
-Const MercuryGrid40Data = Array(Array(-53.25, -13.5), Array(-53.25, -33.5), Array(-41.75, -13.5), Array(-41.75, -33.5), _
-                                Array(-30.25, -13.5), Array(-30.25, -33.5), Array(-18.75, -13.5), Array(-18.75, -33.5), _
-                                Array( -7.25, -13.5), Array( -7.25, -33.5)  )     'Array(0,0),  Array(0,0), _
-                                'Array(0,0),  Array(0,0),  Array(0,0),  Array(0,0),  )
+Const MercuryGrid40Symmetry = Array(Array(1, 1), Array(1,  1), Array( 1,   1), Array( 1,    1) )
+Const MercuryGrid40Offset   = Array(Array(0, 0), Array(0, 47), Array(60.5, 0), Array(60.5, 47) )
+Const MercuryGrid40Data     = Array(Array(-53.25, -13.5), Array(-53.25, -33.5), Array(-41.75, -13.5), Array(-41.75, -33.5), _
+                                    Array(-30.25, -13.5), Array(-30.25, -33.5), Array(-18.75, -13.5), Array(-18.75, -33.5), _
+                                    Array( -7.25, -13.5), Array( -7.25, -33.5)  )
 Const Mercury10x4 As Long = 1040
 Const txtMercury10x4 As String = "Mercury40"
 '---------------------------------------------------------------------------------------------------------------------
 ' OCXO Mercury Ageing System card 4 wide by 15 long; cells 30mm x 50mm
 Const OCXOMercuryGrid60Units As Long =  ppcbUnitMetric
-Const OCXOMercuryGrid60Symmetry = Array(Array(1, 1), Array(1, 1), Array(1, 1), Array(1, 1) )
-Const OCXOMercuryGrid60Offset = Array(Array(0, 0), Array(0, 50), Array(0, -50), Array(0, 100) )
-Const OCXOMercuryGrid60Data = Array(Array(0, 0), Array(30, 0), Array(60, 0), Array(90, 0), _
-                                Array(120, 0), Array(150, 0), Array(180, 0), Array(210, 0), _
-                                Array( 240, 0), Array( 270, 0), Array(300,0),  Array(330,0), _
-                                Array(360,0),  Array(390,0),  Array(420,0), Array(450,0) )   ',  Array(0,0),  )
+Const OCXOMercuryGrid60Symmetry = Array(Array(  1, 1), Array( 1,  1), Array( 1,   1), Array( 1,   1) )
+Const OCXOMercuryGrid60Offset   = Array(Array(  0, 0), Array( 0, 50), Array( 0, -50), Array( 0, 100) )
+Const OCXOMercuryGrid60Data     = Array(Array(  0, 0), Array( 30, 0), Array( 60, 0), Array( 90, 0), _
+                                        Array(120, 0), Array(150, 0), Array(180, 0), Array(210, 0), _
+                                        Array(240, 0), Array(270, 0), Array(300, 0), Array(330, 0), _
+                                        Array(360, 0), Array(390, 0), Array(420, 0), Array(450, 0) )
 Const OCXOMercury60 As Long = 1540
 Const txtOCXOMercury60 As String = "OCXO-M60"
 '---------------------------------------------------------------------------------------------------------------------
 ' OCXO Mercury Ageing System card 4 wide by 4 by 4 long (4 blocks of 16); cells 30mm x 50mm
 Const OCXOMercuryGrid64Units As Long =  ppcbUnitMetric
-Const OCXOMercuryGrid64Symmetry = Array(Array(1, 1), Array(1, 1), Array(1, 1), Array(1, 1) )
-Const OCXOMercuryGrid64Offset = Array(Array(0, 0), Array(120, 0), Array(240, 0), Array(360,  0) )
-Const OCXOMercuryGrid64Data = Array(Array( 0, 150), Array( 0, 100), Array( 0, 50), Array( 0, 0), _
-                                    Array(30, 150), Array(30, 100), Array(30, 50), Array(30, 0), _
-                                    Array(60, 150), Array(60, 100), Array(60, 50), Array(60, 0), _
-                                    Array(90, 150), Array(90, 100), Array(90, 50), Array(90, 0) )   ',  Array(0,0),  )
+Const OCXOMercuryGrid64Symmetry = Array(Array( 1,   1), Array(  1,   1), Array(  1,  1), Array(  1, 1) )
+Const OCXOMercuryGrid64Offset   = Array(Array( 0,   0), Array(120,   0), Array(240,  0), Array(360, 0) )
+Const OCXOMercuryGrid64Data     = Array(Array( 0, 150), Array(  0, 100), Array(  0, 50), Array(  0, 0), _
+                                        Array(30, 150), Array( 30, 100), Array( 30, 50), Array( 30, 0), _
+                                        Array(60, 150), Array( 60, 100), Array( 60, 50), Array( 60, 0), _
+                                        Array(90, 150), Array( 90, 100), Array( 90, 50), Array( 90, 0) )
 Const OCXOMercury64 As Long = 1644
 Const txtOCXOMercury64 As String = "OCXO-M64"
 '---------------------------------------------------------------------------------------------------------------------
 ' TCOCXO System card 4 blocks wide by 6 long (4 blocks of 6); cells 50mm x 60mm
 Const TCOCXOGrid24Units As Long =  ppcbUnitMetric
-Const TCOCXOGrid24Symmetry = Array(Array(1, 1), Array(1, 1), Array(1, 1), Array(1, 1) )
-Const TCOCXOGrid24Offset  = Array(Array(0, 0), Array(0, 60), Array(0, 120), Array(0,  180) )
-Const TCOCXOGrid24Data = Array(Array(   0, 0), Array( 50, 0), Array(100, 0), _
-                               Array( 150, 0), Array(200, 0), Array(250, 0) )    ', Array(30, 50), Array(30, 0), _
-                                   ' Array(60, 150), Array(60, 100), Array(60, 50), Array(60, 0), _
-                                   ' Array(90, 150), Array(90, 100), Array(90, 50), Array(90, 0) )   ',  Array(0,0),  )
+Const TCOCXOGrid24Symmetry = Array(Array(  1, 1), Array(  1,  1), Array(1,     1), Array(1,    1) )
+Const TCOCXOGrid24Offset   = Array(Array(  0, 0), Array(  0, 60), Array(0,   120), Array(0,  180) )
+Const TCOCXOGrid24Data     = Array(Array(  0, 0), Array( 50,  0), Array(100,   0), _
+                                   Array(150, 0), Array(200,  0), Array(250,   0) )
 Const TCOCXO24 As Long = 6424
 Const txtTCOCXO24 As String = "TCOCXO_24"
 '---------------------------------------------------------------------------------------------------------------------
