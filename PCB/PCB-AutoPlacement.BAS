@@ -217,41 +217,41 @@ Sub main
     ActiveDocument.SelectObjects(,,False)
 
     Set parts = Document.Components
-	For Each part In parts
+    For Each part In parts
         Set AttrList = part.Attributes
-	    If Not AttrList(BO_Block) Is Nothing Then
-	        If Not AttrList(BO_Cell) Is Nothing Then
-	            If Not AttrList(BO_MasterDesg) Is Nothing Then
-	        
-	                If AttrList(BO_Block) = MasterBlock And AttrList(BO_Cell) = MasterCell And AttrList(BO_MasterDesg) <> "" Then
-	                    part.selected = True
-	                    'If MasterParts Is Nothing Then
-	                    '    Set MasterParts = part
-	                    'Else
-	                    '    MasterParts.Add(part)
-	                    'End If
+        If Not AttrList(BO_Block) Is Nothing Then
+            If Not AttrList(BO_Cell) Is Nothing Then
+                If Not AttrList(BO_MasterDesg) Is Nothing Then
+            
+                    If AttrList(BO_Block) = MasterBlock And AttrList(BO_Cell) = MasterCell And AttrList(BO_MasterDesg) <> "" Then
+                        part.selected = True
+                        'If MasterParts Is Nothing Then
+                        '    Set MasterParts = part
+                        'Else
+                        '    MasterParts.Add(part)
+                        'End If
                     End If
                 End If
             End If
-	    End If
-	Next part
-	
-	Set MasterParts = ActiveDocument.GetObjects(ppcbObjectTypeComponent, "*", True) 
-	Debug.Print MasterParts.Count
-	messageTxt = "Master Part Count = " & Str(MasterParts.Count)
-	messageTxt = messageTxt & Chr$(13) & "PCB Placement Type " & strPlacementTypeTxt
-		
-	MsgAnswer = MsgBox(messageTxt, vbYesNoCancel)
-	
-	' search all parts skipping masters
+        End If
+    Next part
+    
+    Set MasterParts = ActiveDocument.GetObjects(ppcbObjectTypeComponent, "*", True) 
+    Debug.Print MasterParts.Count
+    messageTxt = "Master Part Count = " & Str(MasterParts.Count)
+    messageTxt = messageTxt & Chr$(13) & "PCB Placement Type " & strPlacementTypeTxt
+        
+    MsgAnswer = MsgBox(messageTxt, vbYesNoCancel)
+    
+    ' search all parts skipping masters
     If MsgAnswer = vbYes And MasterParts.Count > 0 Then
-	    For Each part In parts
-	        Set AttrList = part.Attributes
+        For Each part In parts
+            Set AttrList = part.Attributes
             found = False
             ' check part is not in master parts collection
             If MasterParts(part.Name) Is Nothing Then
                 If Not AttrList(BO_Block) Is Nothing And Not AttrList(BO_Cell) Is Nothing _
-	               And Not AttrList(BO_MasterDesg) Is Nothing Then
+                   And Not AttrList(BO_MasterDesg) Is Nothing Then
                     skip = True         ' do no parts
 
                     ' option hack: place only designators starting with--
@@ -285,23 +285,23 @@ Sub main
                     If AttrList(BO_Cell) = "" Then skip = True
                     If AttrList(BO_Cell) = " " Then skip = True
                     If Not skip Then
-	                    ' find match designator in master parts
+                        ' find match designator in master parts
                         For Each mpart In MasterParts
                             Set MasAttrList = mpart.Attributes
 
                             If AttrList(BO_MasterDesg) = MasAttrList(BO_MasterDesg) Then
-	                            Debug.Print part.Name;" : ";mpart.Name;
-	                            found = True
+                                Debug.Print part.Name;" : ";mpart.Name;
+                                found = True
                                 'calculate master part cell offsets X & Y from master cell offset info
-	                            Call CalcOffsets(MasAttrList(BO_Block), MasAttrList(BO_Cell))
-	                            MP_offsetX = mpart.PositionX(ppcbUnits) - offsetX :     MP_offsetY = mpart.PositionY(ppcbUnits) - offsetY   ' centerX centerY  ??? MoveCenter() ???
-	                            MP_Rot = mpart.Orientation : MP_Layer = mpart.layer
+                                Call CalcOffsets(MasAttrList(BO_Block), MasAttrList(BO_Cell))
+                                MP_offsetX = mpart.PositionX(ppcbUnits) - offsetX :     MP_offsetY = mpart.PositionY(ppcbUnits) - offsetY   ' centerX centerY  ??? MoveCenter() ???
+                                MP_Rot = mpart.Orientation : MP_Layer = mpart.layer
 
                                 'calculate part cell offsets X & Y from its own block cell BO info
-	                            Call CalcOffsets(AttrList(BO_Block), AttrList(BO_Cell))
+                                Call CalcOffsets(AttrList(BO_Block), AttrList(BO_Cell))
 
                                 offsetX = offsetX + MP_offsetX: offsetY = offsetY + MP_offsetY
-	                        
+                            
                                 Debug.Print offsetX; " ";offsetY; " O"; MP_Rot; " L"; MP_Layer
                                 If part.Glued Then
                                    Debug.Print part.Name;" : glued";
@@ -343,19 +343,19 @@ Sub main
                                 End If 
                                                               
                                 Exit For
-	                        End If
+                            End If
                         Next mpart
                     End If        ' skip
                 End If            ' req attrib exist
-	        End If                ' not master part
-	    Next part
-	End If                        ' not enough masterparts
-	Debug.Print Now
-	
-	If blnQuestionableData Then
-	    MsgAnswer = MsgBox("Questionable Data found", vbYes)
-	End If
-	Rem
+            End If                ' not master part
+        Next part
+    End If                        ' not enough masterparts
+    Debug.Print Now
+    
+    If blnQuestionableData Then
+        MsgAnswer = MsgBox("Questionable Data found", vbYes)
+    End If
+    Rem
 End Sub
 
 Sub CalcOffsets(block As String,cell As String)
